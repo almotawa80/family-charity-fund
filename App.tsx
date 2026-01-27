@@ -8,14 +8,25 @@ import { Layout } from './components/Layout';
 import { StatCard } from './components/StatCard';
 import {
   Wallet, TrendingUp, Users, CheckCircle,
-  PlusCircle, AlertCircle, Calendar, ThumbsUp, Edit, HeartHandshake, Phone, CalendarDays, Coins, Filter, SortAsc, Settings as SettingsIcon, ShieldCheck, Bell, Info, ChevronLeft, ArrowRight, LayoutDashboard, Briefcase, Trash2, UserCircle, MessageCircle, Megaphone, UserCheck, UserX, Lock, User as UserIcon, LayoutGrid, Sun, Moon, Monitor, Save, KeyRound
+  PlusCircle, AlertCircle, Calendar, ThumbsUp, Edit, HeartHandshake, Phone, CalendarDays, Coins, Filter, SortAsc, Settings as SettingsIcon, ShieldCheck, Bell, Info, ChevronLeft, ArrowRight, LayoutDashboard, Briefcase, Trash2, UserCircle, MessageCircle, Megaphone, UserCheck, UserX, Lock, User as UserIcon, LayoutGrid, Sun, Moon, Monitor, Save, KeyRound, LogOut
 } from 'lucide-react';
 
 export default function App() {
   // --- Global State with LocalStorage Persistence ---
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('family_fund_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    let parsedUsers: User[] = saved ? JSON.parse(saved) : INITIAL_USERS;
+
+    // Ensure there is at least one admin for login
+    const hasAdmin = parsedUsers.some(u => u.role === UserRole.Admin && u.username && u.password);
+    if (!hasAdmin) {
+      // If no admin exists in the saved data, add the default one from INITIAL_USERS
+      const defaultAdmin = INITIAL_USERS.find(u => u.role === UserRole.Admin);
+      if (defaultAdmin) {
+        parsedUsers = [defaultAdmin, ...parsedUsers];
+      }
+    }
+    return parsedUsers;
   });
 
   const [projects, setProjects] = useState<Project[]>(() => {
@@ -28,7 +39,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
   });
 
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [announcement, setAnnouncement] = useState<string>(() => {
     return localStorage.getItem('family_fund_announcement') || '';
   });
@@ -139,11 +150,23 @@ export default function App() {
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem('family_fund_projects', JSON.stringify(projects));
+    try {
+      localStorage.setItem('family_fund_projects', JSON.stringify(projects));
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        alert("تنبيه: ذاكرة المتصفح ممتلئة. قد لا يتم حفظ بيانات المشاريع الجديدة أو الصور.");
+      }
+    }
   }, [projects]);
 
   useEffect(() => {
-    localStorage.setItem('family_fund_transactions', JSON.stringify(transactions));
+    try {
+      localStorage.setItem('family_fund_transactions', JSON.stringify(transactions));
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        alert("تنبيه: ذاكرة المتصفح ممتلئة. قد لا يتم حفظ العمليات المالية الجديدة.");
+      }
+    }
   }, [transactions]);
 
   useEffect(() => {
@@ -182,9 +205,46 @@ export default function App() {
   const handleImageFileChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Basic check for file size before processing
+      if (file.size > 5 * 1024 * 1024) {
+        alert("الصورة كبيرة جداً، يرجى اختيار صورة أصغر من 5 ميجابايت");
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setter(reader.result as string);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimensions for display
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 600;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Use very low quality for JPEG to save space in localStorage
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          setter(compressedDataUrl);
+        };
+        img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -232,7 +292,25 @@ export default function App() {
   }, [projects, projectFilter, projectSort]);
 
   // --- Handlers ---
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = users.find(u => u.username === loginUser && u.password === loginPass);
+    if (user) {
+      if (user.role !== UserRole.Admin) {
+        setLoginError('عذراً، هذا الحساب لا يملك صلاحيات إدارية');
+        return;
+      }
+      setCurrentUser(user);
+      setLoginError('');
+      setLoginUser('');
+      setLoginPass('');
+    } else {
+      setLoginError('اسم المستخدم أو كلمة المرور غير صحيحة');
+    }
+  };
+
   const handleLogout = () => {
+    setCurrentUser(null);
     setCurrentView('dashboard');
   };
 
@@ -719,6 +797,60 @@ export default function App() {
     </div>
   );
 
+  const renderLogin = () => (
+    <div className="max-w-xl mx-auto py-10 animate-in fade-in zoom-in duration-500">
+      <div className="bg-white dark:bg-gray-800 rounded-[3rem] p-12 border border-gray-100 dark:border-gray-700 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-teal-400 to-primary"></div>
+
+        <div className="text-center mb-10">
+          <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 text-primary ring-4 ring-primary/5">
+            <Lock className="w-10 h-10" />
+          </div>
+          <h2 className="text-3xl font-black text-gray-800 dark:text-white mb-3">تسجيل دخول المسؤول</h2>
+          <p className="text-gray-400 font-bold">يرجى إدخال بيانات الاعتماد للوصول للوحة التحكم</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="relative group">
+            <UserCircle className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors w-6 h-6" />
+            <input
+              required
+              type="text"
+              value={loginUser}
+              onChange={e => setLoginUser(e.target.value)}
+              className="w-full pr-14 pl-6 py-5 bg-gray-50 dark:bg-gray-700 dark:text-white border-2 border-transparent rounded-3xl font-bold outline-none focus:border-primary/30 focus:bg-white dark:focus:bg-gray-750 transition-all text-lg"
+              placeholder="اسم المستخدم"
+            />
+          </div>
+
+          <div className="relative group">
+            <KeyRound className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors w-6 h-6" />
+            <input
+              required
+              type="password"
+              value={loginPass}
+              onChange={e => setLoginPass(e.target.value)}
+              className="w-full pr-14 pl-6 py-5 bg-gray-50 dark:bg-gray-700 dark:text-white border-2 border-transparent rounded-3xl font-bold outline-none focus:border-primary/30 focus:bg-white dark:focus:bg-gray-750 transition-all text-lg"
+              placeholder="كلمة المرور"
+            />
+          </div>
+
+          {loginError && (
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-500 p-5 rounded-2xl text-sm font-black flex items-center gap-3 border border-red-100 dark:border-red-900/30 animate-shake">
+              <div className="bg-red-500 w-2 h-2 rounded-full animate-pulse"></div>
+              {loginError}
+            </div>
+          )}
+
+          <button type="submit" className="w-full bg-primary hover:bg-teal-700 text-white font-black py-6 rounded-[1.5rem] shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-4 text-xl border-b-4 border-teal-900 active:border-b-0">
+            <span>دخول النظام</span>
+            <ShieldCheck className="w-6 h-6" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
   const renderManageMembers = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-black dark:text-white">إدارة أعضاء العائلة</h3><button onClick={() => { setEditingUser(null); setUserFormName(''); setUserFormPhone(''); setUserFormPledge('10'); setUserFormJoinDate(''); setIsUserModalOpen(true); }} className="bg-primary text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg hover:shadow-xl active:scale-95 transition-all"><PlusCircle className="w-5 h-5 ml-2" />إضافة عضو</button></div>
@@ -864,12 +996,21 @@ export default function App() {
             </div>
           </div>
         </>
+      ) : !currentUser ? (
+        renderLogin()
       ) : (
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
             <h2 className="text-4xl font-black text-gray-800 dark:text-white flex items-center gap-4">
               <ShieldCheck className="w-10 h-10 text-primary" /> لوحة التحكم الإدارية
             </h2>
+            <button
+              onClick={handleLogout}
+              className="px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-2xl font-black flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+            >
+              <LogOut className="w-5 h-5" />
+              تسجيل خروج
+            </button>
           </div>
 
           <div className="flex gap-4 mb-12 overflow-x-auto pb-4 no-scrollbar">
