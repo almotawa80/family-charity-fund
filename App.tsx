@@ -574,7 +574,7 @@ export default function App() {
               <div className="p-4 bg-amber-500/10 rounded-2xl text-amber-600"><Megaphone className="w-8 h-8" /></div>
               <div>
                 <h3 className="text-2xl font-black dark:text-white">الإعلانات والتحكم الرئيسي</h3>
-                <p className="text-xs text-gray-400 font-bold">إدارة ما يظهر للأعضاء في الشاشة الرئيسية</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-bold">إدارة ما يظهر للأعضاء في الشاشة الرئيسية</p>
               </div>
             </div>
           </div>
@@ -583,7 +583,7 @@ export default function App() {
             {/* Announcement Section */}
             <div className="space-y-6">
               <div className="flex justify-between items-end">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">نص الإعلان الحالي</label>
+                <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mr-2">نص الإعلان الحالي</label>
                 {announcement && <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black">نشط الآن</span>}
               </div>
               <div className="relative">
@@ -990,12 +990,12 @@ export default function App() {
         </div>
         <div className="flex gap-4">
           <div className="text-center">
-            <span className="block text-[10px] font-black text-gray-400 uppercase">إجمالي المشتركين</span>
+            <span className="block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase">إجمالي المشتركين</span>
             <span className="text-xl font-black text-gray-800 dark:text-white">{users.length}</span>
           </div>
           <div className="w-px h-10 bg-gray-200 dark:bg-gray-700"></div>
           <div className="text-center">
-            <span className="block text-[10px] font-black text-gray-400 uppercase">التحصيل الشهري</span>
+            <span className="block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase">التحصيل الشهري</span>
             <span className="text-xl font-black text-teal-600">{formatCurrency(users.reduce((acc, u) => acc + u.monthlyPledge, 0))}</span>
           </div>
         </div>
@@ -1005,12 +1005,12 @@ export default function App() {
           <div key={u.id} className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between group hover:shadow-lg hover:border-teal-200 transition-all">
             <div className="flex-1">
               <div className="font-black text-xl mb-1 dark:text-white">{u.name}</div>
-              <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{u.role === UserRole.Admin ? 'مدير النظام' : 'عضو مساهم'}</div>
+              <div className="text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-widest">{u.role === UserRole.Admin ? 'مدير النظام' : 'عضو مساهم'}</div>
               <div className="flex items-center gap-2 mt-3 text-gray-500 font-bold text-sm" dir="ltr">
                 <Phone className="w-4 h-4 text-primary" />
                 <span>+965 {u.phone}</span>
               </div>
-              <div className="flex items-center gap-2 mt-1 text-gray-400 font-bold text-xs">
+              <div className="flex items-center gap-2 mt-1 text-gray-500 dark:text-gray-400 font-bold text-xs">
                 <CalendarDays className="w-3.5 h-3.5" />
                 <span>انضم في: {u.joinDate ? new Date(u.joinDate).toLocaleDateString('ar-KW') : 'غير محدد'}</span>
               </div>
@@ -1085,9 +1085,9 @@ export default function App() {
                   )}
                   <div className="p-6 md:p-10 flex flex-col flex-grow">
                     <div className="flex justify-between items-start mb-4 md:mb-6">
-                      <h3 className="text-xl md:text-2xl font-black text-gray-800 dark:text-white leading-tight">{project.title}</h3>
+                      <h3 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white leading-tight">{project.title}</h3>
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6 md:mb-10 font-bold leading-relaxed text-base md:text-lg flex-grow">{project.description}</p>
+                    <p className="text-gray-700 dark:text-gray-300 mb-6 md:mb-10 font-bold leading-relaxed text-base md:text-lg flex-grow">{project.description}</p>
                     <div className="mt-auto flex items-center justify-between pt-6 md:pt-8 border-t border-gray-50 dark:border-gray-700 gap-4">
                       <button onClick={() => handleShareWhatsApp(project)} className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black flex items-center gap-2 md:gap-3 transition-all hover:bg-green-600 hover:text-white shadow-sm text-sm"><MessageCircle className="w-5 h-5 md:w-6 md:h-6" /> مشاركة</button>
                       <div className="bg-gray-50 dark:bg-gray-700 px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-gray-800 dark:text-white text-base md:text-xl border border-gray-100 dark:border-gray-600 whitespace-nowrap">{formatCurrency(project.cost)}</div>
@@ -1105,9 +1105,9 @@ export default function App() {
                 <table className="w-full text-sm md:text-lg">
                   <thead>
                     <tr className="bg-gray-50/80 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
-                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">التاريخ</th>
-                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">البيان</th>
-                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">المبلغ</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">التاريخ</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">البيان</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">المبلغ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
