@@ -72,8 +72,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
               <HeartHandshake className="w-8 h-8 opacity-50" />
             </div>
           </div>
-          <p className="text-sm font-black uppercase tracking-[0.2em] mb-2">صندوق العائلة الخيري</p>
-          <p className="text-xs font-bold opacity-40 leading-relaxed">منصة إلكترونية متكاملة لإدارة الأنشطة الخيرية والمساهمات العائلية.<br />جميع الحقوق محفوظة &copy; {new Date().getFullYear()}</p>
+          <p className="text-base font-black mb-2">صندوق العائلة الخيري</p>
+          <p className="text-sm font-bold opacity-40 leading-relaxed">منصة إلكترونية متكاملة لإدارة الأنشطة الخيرية والمساهمات العائلية.<br />جميع الحقوق محفوظة &copy; {new Date().getFullYear()}</p>
         </div>
       </footer>
 

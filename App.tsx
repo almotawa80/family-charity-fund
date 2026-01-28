@@ -990,13 +990,13 @@ export default function App() {
         </div>
         <div className="flex gap-4">
           <div className="text-center">
-            <span className="block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase">إجمالي المشتركين</span>
-            <span className="text-xl font-black text-gray-800 dark:text-white">{users.length}</span>
+            <span className="block text-xs font-black text-gray-600 dark:text-gray-400 mb-1">إجمالي المشتركين</span>
+            <span className="text-2xl font-black text-gray-800 dark:text-white">{users.length}</span>
           </div>
           <div className="w-px h-10 bg-gray-200 dark:bg-gray-700"></div>
           <div className="text-center">
-            <span className="block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase">التحصيل الشهري</span>
-            <span className="text-xl font-black text-teal-600">{formatCurrency(users.reduce((acc, u) => acc + u.monthlyPledge, 0))}</span>
+            <span className="block text-xs font-black text-gray-600 dark:text-gray-400 mb-1">التحصيل الشهري</span>
+            <span className="text-2xl font-black text-teal-600">{formatCurrency(users.reduce((acc, u) => acc + u.monthlyPledge, 0))}</span>
           </div>
         </div>
       </div>
@@ -1005,7 +1005,7 @@ export default function App() {
           <div key={u.id} className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between group hover:shadow-lg hover:border-teal-200 transition-all">
             <div className="flex-1">
               <div className="font-black text-xl mb-1 dark:text-white">{u.name}</div>
-              <div className="text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-widest">{u.role === UserRole.Admin ? 'مدير النظام' : 'عضو مساهم'}</div>
+              <div className="text-xs font-black text-gray-500 dark:text-gray-400">{u.role === UserRole.Admin ? 'مدير النظام' : 'عضو مساهم'}</div>
               <div className="flex items-center gap-2 mt-3 text-gray-500 font-bold text-sm" dir="ltr">
                 <Phone className="w-4 h-4 text-primary" />
                 <span>+965 {u.phone}</span>
@@ -1105,9 +1105,9 @@ export default function App() {
                 <table className="w-full text-sm md:text-lg">
                   <thead>
                     <tr className="bg-gray-50/80 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
-                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">التاريخ</th>
-                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">البيان</th>
-                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">المبلغ</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-xs md:text-sm">التاريخ</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-xs md:text-sm">البيان</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-700 dark:text-gray-300 text-xs md:text-sm">المبلغ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
