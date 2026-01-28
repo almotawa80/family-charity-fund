@@ -1060,26 +1060,26 @@ export default function App() {
             <h2 className="text-3xl font-black border-r-8 border-primary pr-4 mb-10 text-gray-800 dark:text-white">المبادرات والمشاريع الحالية</h2>
             <div className="flex flex-col gap-10">
               {filteredAndSortedProjects.map(project => (
-                <div key={project.id} className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group">
+                <div key={project.id} className="bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group">
                   {project.image && (
-                    <div className="h-56 w-full overflow-hidden relative">
+                    <div className="h-48 md:h-56 w-full overflow-hidden relative">
                       <img src={project.image} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      <div className="absolute bottom-6 right-8">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${project.status === ProjectStatus.Voting ? 'bg-red-500 text-white' : project.status === ProjectStatus.Active ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+                      <div className="absolute bottom-4 md:bottom-6 right-6 md:right-8">
+                        <span className={`px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-wider shadow-lg ${project.status === ProjectStatus.Voting ? 'bg-red-500 text-white' : project.status === ProjectStatus.Active ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
                           {project.status === ProjectStatus.Active ? 'قيد التنفيذ' : project.status === ProjectStatus.Voting ? 'تصويت' : 'مكتمل'}
                         </span>
                       </div>
                     </div>
                   )}
-                  <div className="p-10 flex flex-col flex-grow">
-                    <div className="flex justify-between items-start mb-6">
-                      <h3 className="text-2xl font-black text-gray-800 dark:text-white leading-tight">{project.title}</h3>
+                  <div className="p-6 md:p-10 flex flex-col flex-grow">
+                    <div className="flex justify-between items-start mb-4 md:mb-6">
+                      <h3 className="text-xl md:text-2xl font-black text-gray-800 dark:text-white leading-tight">{project.title}</h3>
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 mb-10 font-bold leading-relaxed text-lg flex-grow">{project.description}</p>
-                    <div className="mt-auto flex items-center justify-between pt-8 border-t border-gray-50 dark:border-gray-700">
-                      <button onClick={() => handleShareWhatsApp(project)} className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all hover:bg-green-600 hover:text-white shadow-sm"><MessageCircle className="w-6 h-6" /> مشاركة</button>
-                      <div className="bg-gray-50 dark:bg-gray-700 px-8 py-4 rounded-2xl font-black text-gray-800 dark:text-white text-xl border border-gray-100 dark:border-gray-600">{formatCurrency(project.cost)}</div>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6 md:mb-10 font-bold leading-relaxed text-base md:text-lg flex-grow">{project.description}</p>
+                    <div className="mt-auto flex items-center justify-between pt-6 md:pt-8 border-t border-gray-50 dark:border-gray-700 gap-4">
+                      <button onClick={() => handleShareWhatsApp(project)} className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black flex items-center gap-2 md:gap-3 transition-all hover:bg-green-600 hover:text-white shadow-sm text-sm"><MessageCircle className="w-5 h-5 md:w-6 md:h-6" /> مشاركة</button>
+                      <div className="bg-gray-50 dark:bg-gray-700 px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-gray-800 dark:text-white text-base md:text-xl border border-gray-100 dark:border-gray-600 whitespace-nowrap">{formatCurrency(project.cost)}</div>
                     </div>
                   </div>
                 </div>
@@ -1089,22 +1089,22 @@ export default function App() {
 
           <div className="mb-12">
             <h2 className="text-3xl font-black mb-10 text-gray-800 dark:text-white">آخر العمليات المالية المنفذة</h2>
-            <div className="bg-white dark:bg-gray-800 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-xl overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-lg">
+                <table className="w-full text-sm md:text-lg">
                   <thead>
                     <tr className="bg-gray-50/80 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
-                      <th className="px-10 py-6 text-start font-black text-gray-400 dark:text-gray-500 text-xs uppercase tracking-[0.2em]">التاريخ</th>
-                      <th className="px-10 py-6 text-start font-black text-gray-400 dark:text-gray-500 text-xs uppercase tracking-[0.2em]">البيان</th>
-                      <th className="px-10 py-6 text-start font-black text-gray-400 dark:text-gray-500 text-xs uppercase tracking-[0.2em]">المبلغ</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">التاريخ</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">البيان</th>
+                      <th className="px-4 md:px-10 py-4 md:py-6 text-start font-black text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em]">المبلغ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                     {transactions.slice().reverse().slice(0, 6).map(t => (
                       <tr key={t.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300">
-                        <td className="px-10 py-7 text-gray-400 font-bold">{new Date(t.date).toLocaleDateString('ar-EG')}</td>
-                        <td className="px-10 py-7 font-black text-gray-800 dark:text-white">{t.description}</td>
-                        <td className={`px-10 py-7 font-black text-xl ${t.type === TransactionType.Deposit ? 'text-teal-600' : 'text-red-500'}`}>
+                        <td className="px-4 md:px-10 py-4 md:py-7 text-gray-400 font-bold whitespace-nowrap">{new Date(t.date).toLocaleDateString('ar-EG')}</td>
+                        <td className="px-4 md:px-10 py-4 md:py-7 font-black text-gray-800 dark:text-white">{t.description}</td>
+                        <td className={`px-4 md:px-10 py-4 md:py-7 font-black text-base md:text-xl whitespace-nowrap ${t.type === TransactionType.Deposit ? 'text-teal-600' : 'text-red-500'}`}>
                           {t.type === TransactionType.Deposit ? '+' : '-'}{formatCurrency(t.amount)}
                         </td>
                       </tr>
