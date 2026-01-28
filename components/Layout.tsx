@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { User, UserRole } from '../types';
-import { LogOut, HeartHandshake, Home, Settings, ShieldCheck, User as UserIcon, Lock } from 'lucide-react';
+import { User, UserRole, ThemeMode } from '../types';
+import { LogOut, HeartHandshake, Home, Settings, ShieldCheck, User as UserIcon, Lock, Sun, Moon } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,9 +9,11 @@ interface LayoutProps {
   onLogout: () => void;
   currentView: string;
   setView: (view: string) => void;
+  theme: ThemeMode;
+  onThemeToggle: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, currentView, setView }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout, currentView, setView, theme, onThemeToggle }) => {
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-gray-900 flex flex-col pb-20 md:pb-0 transition-colors duration-500">
       {/* Navbar (Top) */}
@@ -44,8 +46,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentUser, onLogout,
               </button>
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Optional: Add a simple brand label or keep it clean */}
+            <div className="flex items-center gap-2 md:gap-4">
+              <button
+                onClick={onThemeToggle}
+                className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300 ring-1 ring-white/20"
+                title="تغيير المظهر"
+              >
+                {theme === 'dark' ? <Sun className="w-5 h-5 md:w-6 md:h-6" /> : <Moon className="w-5 h-5 md:w-6 md:h-6" />}
+              </button>
             </div>
           </div>
         </div>

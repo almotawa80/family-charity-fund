@@ -353,6 +353,10 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
+  const handleThemeToggle = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -1035,7 +1039,14 @@ export default function App() {
   // --- Main Render ---
 
   return (
-    <Layout currentUser={currentUser} onLogout={handleLogout} currentView={currentView} setView={setCurrentView}>
+    <Layout
+      currentUser={currentUser}
+      onLogout={handleLogout}
+      currentView={currentView}
+      setView={setCurrentView}
+      theme={theme}
+      onThemeToggle={handleThemeToggle}
+    >
       {currentView === 'dashboard' ? (
         <>
           {announcement && (
