@@ -1,11 +1,13 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import Cropper, { Area, Point } from 'react-easy-crop';
 import {
   User, Transaction, Project, UserRole, UserStatus, TransactionType, ProjectStatus, ThemeMode
 } from './types';
 import { INITIAL_USERS, INITIAL_PROJECTS, INITIAL_TRANSACTIONS } from './constants';
 import { Layout } from './components/Layout';
 import { StatCard } from './components/StatCard';
+import { supabase } from './supabaseClient';
 import {
   Wallet, TrendingUp, Users, CheckCircle,
   PlusCircle, AlertCircle, Calendar, ThumbsUp, Edit, HeartHandshake, Phone, CalendarDays, Coins, Filter, SortAsc, Settings as SettingsIcon, ShieldCheck, Bell, Info, ChevronLeft, ArrowRight, LayoutDashboard, Briefcase, Trash2, UserCircle, MessageCircle, Megaphone, UserCheck, UserX, Lock, User as UserIcon, LayoutGrid, Sun, Moon, Monitor, Save, KeyRound, LogOut
@@ -13,36 +15,14 @@ import {
 
 export default function App() {
   // --- Global State with LocalStorage Persistence ---
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('family_fund_users');
-    let parsedUsers: User[] = saved ? JSON.parse(saved) : INITIAL_USERS;
-
-    // Ensure there is at least one admin for login
-    const hasAdmin = parsedUsers.some(u => u.role === UserRole.Admin && u.username && u.password);
-    if (!hasAdmin) {
-      // If no admin exists in the saved data, add the default one from INITIAL_USERS
-      const defaultAdmin = INITIAL_USERS.find(u => u.role === UserRole.Admin);
-      if (defaultAdmin) {
-        parsedUsers = [defaultAdmin, ...parsedUsers];
-      }
-    }
-    return parsedUsers;
-  });
-
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('family_fund_projects');
-    return saved ? JSON.parse(saved) : INITIAL_PROJECTS;
-  });
-
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('family_fund_transactions');
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-  });
-
+  // --- Global State with Supabase Logic ---
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [announcement, setAnnouncement] = useState<string>(() => {
-    return localStorage.getItem('family_fund_announcement') || '';
-  });
+  const [announcement, setAnnouncement] = useState<string>('');
+  const [startingBalance, setStartingBalance] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [theme, setTheme] = useState<ThemeMode>(() => {
     return (localStorage.getItem('family_fund_theme') as ThemeMode) || 'system';
@@ -53,9 +33,6 @@ export default function App() {
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [startingBalance, setStartingBalance] = useState<number>(() => {
-    return Number(localStorage.getItem('family_fund_starting_balance')) || 0;
-  });
 
   const [showStats, setShowStats] = useState(() => {
     const saved = localStorage.getItem('family_fund_show_stats');
@@ -68,7 +45,7 @@ export default function App() {
   });
 
   // Forms State
-  const [announcementInput, setAnnouncementInput] = useState(announcement);
+  const [announcementInput, setAnnouncementInput] = useState('');
   const [expenseDesc, setExpenseDesc] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseProjectId, setExpenseProjectId] = useState<number | ''>('');
@@ -98,6 +75,13 @@ export default function App() {
 
   const [transactionSearch, setTransactionSearch] = useState('');
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | TransactionType>('all');
+
+  // Cropper State
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [cropperSetter, setCropperSetter] = useState<React.Dispatch<React.SetStateAction<string>> | null>(null);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
@@ -106,6 +90,55 @@ export default function App() {
   const [transFormAmount, setTransFormAmount] = useState('');
   const [transFormDate, setTransFormDate] = useState('');
   const [transFormProjectId, setTransFormProjectId] = useState<number | ''>('');
+
+  // --- Initial Data Fetching from Supabase ---
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch Users
+        const { data: userData, error: userError } = await supabase.from('users').select('*');
+        if (userError) throw userError;
+        if (userData && userData.length > 0) {
+          // Ensure it works with the INITIAL_USERS admin if no admin found
+          const hasAdmin = userData.some(u => u.role === UserRole.Admin && u.username && u.password);
+          if (!hasAdmin) {
+            setUsers([INITIAL_USERS[0], ...userData as User[]]);
+          } else {
+            setUsers(userData as User[]);
+          }
+        } else {
+          setUsers(INITIAL_USERS);
+        }
+
+        // Fetch Projects
+        const { data: projectData, error: projectError } = await supabase.from('projects').select('*');
+        if (projectError) throw projectError;
+        setProjects(projectData && projectData.length > 0 ? projectData as Project[] : INITIAL_PROJECTS);
+
+        // Fetch Transactions
+        const { data: transData, error: transError } = await supabase.from('transactions').select('*');
+        if (transError) throw transError;
+        setTransactions(transData && transData.length > 0 ? transData as Transaction[] : INITIAL_TRANSACTIONS);
+
+        // Fetch Settings
+        const { data: settingsData, error: settingsError } = await supabase.from('settings').select('*');
+        if (settingsError) throw settingsError;
+        if (settingsData) {
+          const ann = settingsData.find(s => s.key === 'announcement');
+          const bal = settingsData.find(s => s.key === 'starting_balance');
+          if (ann) { setAnnouncement(ann.value); setAnnouncementInput(ann.value); }
+          if (bal) { setStartingBalance(Number(bal.value)); }
+        }
+      } catch (err) {
+        console.error('Error fetching data from Supabase:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // --- Theme Logic ---
   useEffect(() => {
@@ -143,47 +176,6 @@ export default function App() {
       setProfilePass(currentUser.password || '');
     }
   }, [currentUser]);
-
-  // --- Persistence Effects ---
-  useEffect(() => {
-    localStorage.setItem('family_fund_users', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('family_fund_projects', JSON.stringify(projects));
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        alert("تنبيه: ذاكرة المتصفح ممتلئة. قد لا يتم حفظ بيانات المشاريع الجديدة أو الصور.");
-      }
-    }
-  }, [projects]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('family_fund_transactions', JSON.stringify(transactions));
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        alert("تنبيه: ذاكرة المتصفح ممتلئة. قد لا يتم حفظ العمليات المالية الجديدة.");
-      }
-    }
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('family_fund_announcement', announcement);
-  }, [announcement]);
-
-  useEffect(() => {
-    localStorage.setItem('family_fund_starting_balance', startingBalance.toString());
-  }, [startingBalance]);
-
-  useEffect(() => {
-    localStorage.setItem('family_fund_show_stats', JSON.stringify(showStats));
-  }, [showStats]);
-
-  useEffect(() => {
-    localStorage.setItem('family_fund_show_completed', JSON.stringify(showCompleted));
-  }, [showCompleted]);
 
   // --- Helpers ---
   const formatCurrency = (amount: number) => {
@@ -289,7 +281,54 @@ export default function App() {
       return b.id - a.id;
     });
     return result;
-  }, [projects, projectFilter, projectSort]);
+  }, [projects, projectFilter, projectSort, showCompleted]);
+
+  // --- Image Cropping Helpers ---
+  const handleCropComplete = useCallback((_area: Area, pixels: Area) => {
+    setCroppedAreaPixels(pixels);
+  }, []);
+
+  const closeCropper = () => {
+    setImageToCrop(null);
+    setCropperSetter(null);
+  };
+
+  const onConfirmCrop = async () => {
+    if (imageToCrop && croppedAreaPixels && cropperSetter) {
+      const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      if (croppedImage) {
+        cropperSetter(croppedImage);
+      }
+    }
+    closeCropper();
+  };
+
+  const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<string | null> => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise((resolve) => (image.onload = resolve));
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return canvas.toDataURL('image/jpeg', 0.8);
+  };
 
   // --- Handlers ---
   const handleLogin = (e: React.FormEvent) => {
@@ -314,19 +353,23 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
-    setUsers(prev => prev.map(u =>
-      u.id === currentUser.id
-        ? { ...u, name: profileName, username: profileUser, password: profilePass }
-        : u
-    ));
-    setCurrentUser(prev => prev ? { ...prev, name: profileName, username: profileUser, password: profilePass } : null);
+    const updatedUser = { ...currentUser, name: profileName, username: profileUser, password: profilePass };
+
+    const { error } = await supabase.from('users').upsert(updatedUser);
+    if (error) {
+      alert("خطأ في حفظ الملف الشخصي: " + error.message);
+      return;
+    }
+
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+    setCurrentUser(updatedUser);
     alert("تم تحديث الملف الشخصي بنجاح");
   };
 
-  const processMonthlyDeductions = () => {
+  const processMonthlyDeductions = async () => {
     if (!window.confirm("هل أنت متأكد من تنفيذ الاستقطاعات الشهرية؟")) return;
     const activeUsers = users.filter(u => u.status === UserStatus.Active);
     const newTransactions: Transaction[] = activeUsers.map(user => ({
@@ -337,11 +380,18 @@ export default function App() {
       date: new Date().toISOString(),
       description: "استقطاع شهري تلقائي"
     }));
+
+    const { error } = await supabase.from('transactions').insert(newTransactions);
+    if (error) {
+      alert("خطأ في تنفيذ الاستقطاعات: " + error.message);
+      return;
+    }
+
     setTransactions(prev => [...prev, ...newTransactions]);
     alert("تم تنفيذ الاستقطاعات بنجاح.");
   };
 
-  const handleAddExpense = (e: React.FormEvent) => {
+  const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(expenseAmount);
     if (!amount || !expenseDesc) return;
@@ -353,6 +403,13 @@ export default function App() {
       date: new Date().toISOString(),
       projectId: expenseProjectId ? Number(expenseProjectId) : undefined
     };
+
+    const { error } = await supabase.from('transactions').insert(newTransaction);
+    if (error) {
+      alert("خطأ في تسجيل المصروف: " + error.message);
+      return;
+    }
+
     setTransactions(prev => [...prev, newTransaction]);
     setExpenseAmount('');
     setExpenseDesc('');
@@ -360,17 +417,18 @@ export default function App() {
     alert("تم تسجيل المصروف.");
   };
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (userFormPhone.length < 8) {
       alert("يرجى إدخال رقم هاتف صحيح مكون من 8 أرقام.");
       return;
     }
 
+    let updatedUser: User;
     if (editingUser) {
-      setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, name: userFormName, phone: userFormPhone, monthlyPledge: parseFloat(userFormPledge), joinDate: userFormJoinDate || u.joinDate } : u));
+      updatedUser = { ...editingUser, name: userFormName, phone: userFormPhone, monthlyPledge: parseFloat(userFormPledge), joinDate: userFormJoinDate || editingUser.joinDate };
     } else {
-      const newUser: User = {
+      updatedUser = {
         id: Date.now(),
         name: userFormName,
         phone: userFormPhone,
@@ -379,62 +437,110 @@ export default function App() {
         status: UserStatus.Active,
         role: UserRole.Member
       };
-      setUsers(prev => [...prev, newUser]);
+    }
+
+    const { error } = await supabase.from('users').upsert(updatedUser);
+    if (error) {
+      alert("خطأ في حفظ بيانات العضو: " + error.message);
+      return;
+    }
+
+    if (editingUser) {
+      setUsers(prev => prev.map(u => u.id === editingUser.id ? updatedUser : u));
+    } else {
+      setUsers(prev => [...prev, updatedUser]);
     }
     setIsUserModalOpen(false);
   };
 
-  const toggleUserStatus = (user: User) => {
+  const toggleUserStatus = async (user: User) => {
     const isActive = user.status === UserStatus.Active;
     if (window.confirm(isActive ? `تجميد حساب ${user.name}؟` : `تنشيط حساب ${user.name}؟`)) {
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: isActive ? UserStatus.Inactive : UserStatus.Active } : u));
+      const updatedStatus = isActive ? UserStatus.Inactive : UserStatus.Active;
+      const { error } = await supabase.from('users').update({ status: updatedStatus }).eq('id', user.id);
+      if (error) {
+        alert("خطأ في تغيير حالة العضو: " + error.message);
+        return;
+      }
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: updatedStatus } : u));
     }
   };
 
-  const handleDeleteUser = (userId: number, userName: string) => {
+  const handleDeleteUser = async (userId: number, userName: string) => {
     if (window.confirm(`هل أنت متأكد من حذف العضو ${userName} نهائياً؟ لا يمكن التراجع عن هذه الخطوة.`)) {
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+      if (error) {
+        alert("خطأ في حذف العضو: " + error.message);
+        return;
+      }
       setUsers(prev => prev.filter(u => u.id !== userId));
     }
   };
 
-  const handleSaveProject = (e: React.FormEvent) => {
+  const handleSaveProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updatedProject: Project;
     if (editingProject) {
-      setProjects(prev => prev.map(p => p.id === editingProject.id ? { ...p, title: projectFormTitle, description: projectFormDesc, cost: parseFloat(projectFormCost), status: projectFormStatus, image: projectFormImage } : p));
+      updatedProject = { ...editingProject, title: projectFormTitle, description: projectFormDesc, cost: parseFloat(projectFormCost), status: projectFormStatus, image: projectFormImage };
     } else {
-      const newProject: Project = { id: Date.now(), title: projectFormTitle, description: projectFormDesc, cost: parseFloat(projectFormCost), status: projectFormStatus, votes: 0, votedUserIds: [], image: projectFormImage };
-      setProjects(prev => [...prev, newProject]);
+      updatedProject = { id: Date.now(), title: projectFormTitle, description: projectFormDesc, cost: parseFloat(projectFormCost), status: projectFormStatus, votes: 0, votedUserIds: [], image: projectFormImage };
+    }
+
+    const { error } = await supabase.from('projects').upsert(updatedProject);
+    if (error) {
+      alert("خطأ في حفظ المشروع: " + error.message);
+      return;
+    }
+
+    if (editingProject) {
+      setProjects(prev => prev.map(p => p.id === editingProject.id ? updatedProject : p));
+    } else {
+      setProjects(prev => [...prev, updatedProject]);
     }
     setIsProjectModalOpen(false);
   };
 
-  const handleDeleteProject = (projectId: number, projectTitle: string) => {
+  const handleDeleteProject = async (projectId: number, projectTitle: string) => {
     if (window.confirm(`هل أنت متأكد من حذف المشروع "${projectTitle}"؟ سيؤدي ذلك لحذف جميع السجلات المرتبطة به.`)) {
+      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      if (error) {
+        alert("خطأ في حذف المشروع: " + error.message);
+        return;
+      }
       setProjects(prev => prev.filter(p => p.id !== projectId));
     }
   };
 
-  const handleDeleteTransaction = (transactionId: number) => {
+  const handleDeleteTransaction = async (transactionId: number) => {
     if (window.confirm("هل أنت متأكد من حذف هذه العملية المالية؟")) {
+      const { error } = await supabase.from('transactions').delete().eq('id', transactionId);
+      if (error) {
+        alert("خطأ في حذف العملية المالية: " + error.message);
+        return;
+      }
       setTransactions(prev => prev.filter(t => t.id !== transactionId));
     }
   };
 
-  const handleSaveTransaction = (e: React.FormEvent) => {
+  const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTransaction) return;
 
-    setTransactions(prev => prev.map(t =>
-      t.id === editingTransaction.id
-        ? {
-          ...t,
-          description: transFormDesc,
-          amount: parseFloat(transFormAmount),
-          date: new Date(transFormDate).toISOString(),
-          projectId: transFormProjectId ? Number(transFormProjectId) : undefined
-        }
-        : t
-    ));
+    const updatedTransaction = {
+      ...editingTransaction,
+      description: transFormDesc,
+      amount: parseFloat(transFormAmount),
+      date: new Date(transFormDate).toISOString(),
+      projectId: transFormProjectId ? Number(transFormProjectId) : undefined
+    };
+
+    const { error } = await supabase.from('transactions').upsert(updatedTransaction);
+    if (error) {
+      alert("خطأ في حفظ العملية: " + error.message);
+      return;
+    }
+
+    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updatedTransaction : t));
     setIsTransactionModalOpen(false);
   };
 
@@ -487,13 +593,24 @@ export default function App() {
               </div>
               <div className="flex gap-4">
                 <button
-                  onClick={() => { setAnnouncement(announcementInput); alert('تم نشر الإعلان بنجاح'); }}
+                  onClick={async () => {
+                    const { error } = await supabase.from('settings').upsert({ key: 'announcement', value: announcementInput });
+                    if (error) { alert("خطأ في حفظ الإعلان: " + error.message); return; }
+                    setAnnouncement(announcementInput);
+                    alert('تم نشر الإعلان بنجاح');
+                  }}
                   className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black py-5 rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-lg border-b-4 border-amber-800 active:border-b-0"
                 >
                   نشر الإعلان
                 </button>
                 <button
-                  onClick={() => { setAnnouncement(''); setAnnouncementInput(''); alert('تم إخفاء الإعلان'); }}
+                  onClick={async () => {
+                    const { error } = await supabase.from('settings').upsert({ key: 'announcement', value: '' });
+                    if (error) { alert("خطأ في إخفاء الإعلان: " + error.message); return; }
+                    setAnnouncement('');
+                    setAnnouncementInput('');
+                    alert('تم إخفاء الإعلان');
+                  }}
                   className="px-10 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-black py-5 rounded-2xl hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-200"
                 >
                   إخفاء
@@ -539,7 +656,12 @@ export default function App() {
                   <input
                     type="number"
                     value={startingBalance || ''}
-                    onChange={e => setStartingBalance(Number(e.target.value))}
+                    onChange={async (e) => {
+                      const val = Number(e.target.value);
+                      const { error } = await supabase.from('settings').upsert({ key: 'starting_balance', value: val.toString() });
+                      if (error) { console.error("Error saving balance:", error); }
+                      setStartingBalance(val);
+                    }}
                     className="w-full pr-8 pl-6 py-5 bg-white dark:bg-gray-800 border-2 border-teal-500/10 rounded-[1.5rem] font-black text-3xl outline-none focus:border-teal-500/40 transition-all text-center text-teal-600 shadow-sm"
                     placeholder="0"
                   />
@@ -1183,6 +1305,67 @@ export default function App() {
                 حفظ التغييرات
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Cropper Modal */}
+      {imageToCrop && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[200] p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[80vh]">
+            <div className="p-8 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-black text-gray-800 dark:text-white">تعديل وقص الصورة</h3>
+                <p className="text-sm text-gray-400 font-bold">اختر الجزء المناسب للعرض</p>
+              </div>
+              <button onClick={closeCropper} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-red-50 hover:text-red-500 transition-all">
+                <ArrowRight className="w-6 h-6 rotate-45" />
+              </button>
+            </div>
+
+            <div className="relative flex-grow bg-gray-50 dark:bg-black/20">
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={16 / 9}
+                onCropChange={setCrop}
+                onCropComplete={handleCropComplete}
+                onZoomChange={setZoom}
+              />
+            </div>
+
+            <div className="p-8 bg-white dark:bg-gray-900 space-y-8">
+              <div className="flex items-center gap-6">
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest leading-none">تكبير</span>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="flex-grow accent-primary h-2 bg-gray-100 dark:bg-gray-800 rounded-full appearance-none cursor-pointer"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={onConfirmCrop}
+                  className="flex-1 bg-primary text-white font-black py-5 rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all text-lg flex items-center justify-center gap-3 border-b-4 border-teal-800"
+                >
+                  <CheckCircle className="w-6 h-6" />
+                  <span>اعتماد الصورة</span>
+                </button>
+                <button
+                  onClick={closeCropper}
+                  className="px-10 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-black py-5 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
